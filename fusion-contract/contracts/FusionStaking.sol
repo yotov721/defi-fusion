@@ -2,7 +2,9 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./FusionNFT.sol";
+import "./FusionToken.sol";
 
 contract FusionStaking is FusionNFT {
     IERC20 public token;
@@ -35,7 +37,7 @@ contract FusionStaking is FusionNFT {
         uint256 _maxStakingDuration,
         uint16 _rewardRateInPercentage
     ) {
-        token = IERC20(_tokenAddress);
+        token = ERC20(_tokenAddress);
         maxTotalStake = _maxTotalStake;
         maxUserStake = _maxUserStake;
         tokenIdCounter = 1;
