@@ -1,14 +1,14 @@
 import { ethers, network, run } from "hardhat";
 
 async function main() {
-    const fusionNFT = await ethers.deployContract("FusionToken");
-    const deploymentTx1 = await fusionNFT.deploymentTransaction()
-    await fusionNFT.waitForDeployment();
+    const fusionToken = await ethers.deployContract("FusionToken");
+    const fusionTokenDeploymentTx = await fusionToken.deploymentTransaction()
+    await fusionToken.waitForDeployment();
 
-    console.log(`FusionNFT contract deployed to ${fusionNFT.target}`);
+    console.log(`FusionToken contract deployed to ${fusionToken.target}`);
 
     const constructorArgs = [
-        fusionNFT.target,
+        fusionToken.target,
         1000000, // maxTotalStake
         1000,    // maxUserStake
         30,      // maxStakingDuration (in seconds)
@@ -16,18 +16,18 @@ async function main() {
     ];
 
     const fusionStaking = await ethers.deployContract("FusionStaking", constructorArgs)
-    const deploymentTx = await fusionStaking.deploymentTransaction()
+    const fusionStakingDeploymentTx = await fusionStaking.deploymentTransaction()
     await fusionStaking.waitForDeployment()
 
     console.log(`FusionStaking contract deployed to ${fusionStaking.target}`)
 
     if (network.name == "sepolia") {
-        await deploymentTx?.wait(5);
-        await deploymentTx1?.wait(5);
+        await fusionStakingDeploymentTx?.wait(5);
+        await fusionTokenDeploymentTx?.wait(5);
 
         try {
             await run("verify:verify", {
-                address: fusionNFT.target,
+                address: fusionToken.target,
                 constructorArguments: [],
             });
             console.log("FusionToken contract verified on Etherscan");
