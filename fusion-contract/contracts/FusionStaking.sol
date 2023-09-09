@@ -3,27 +3,60 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./FusionNFT.sol";
 import "./FusionToken.sol";
 
+// TODO
+// NatSpec
+// README
+// require -> custom errors
+// Add SafeMath for operations
+//
 contract FusionStaking is FusionNFT {
+    using SafeMath for uint256;
+    using Math for uint256;
+
     IERC20 public token;
     uint256 public maxTotalStake;
     uint256 public maxUserStake;
     uint256 public totalYield;
     uint256 public totalStaked;
 
-    struct Stake {
-        uint256 amount;
-        uint256 startTimestamp;
-        bool exists;
-    }
-
     mapping(uint256 => Stake) public stakedBalances;
     mapping(address => bool) public hasWithdrawn;
 
     uint16 public rewardRateInPercentage;
     uint256 public maxStakingDuration;
+
+    modifier isElegibleToStake() {
+        if (hasWithdrawn[msg.sender]) {
+            revert UserAlreadyWithdrawn();
+        }
+        if (balanceOf(msg.sender) > 0) {
+            revert UserAlreadyStaked();
+        }
+        _;
+    }
+
+    error UserAlreadyWithdrawn();
+    error UserAlreadyStaked();
+    error NoAllowance();
+    error AmountExceedsUserStakeLimit();
+    error AmountExceedsTotalStakeLimit();
+    error StakeFailed();
+    error AmountMustBeGreaterThanZero();
+    error StakeDoesNotExist();
+    error TokenDoesNotExist();
+    error NotTokenOwner();
+    error NoYieldLeft();
+
+    struct Stake {
+        uint256 amount;
+        uint256 startTimestamp;
+        bool exists;
+    }
 
     event Staked(address indexed user, uint256 amount, uint256 tokenId);
     event Unstaked(address indexed user, uint256 amount, uint256 tokenId);
@@ -40,24 +73,26 @@ contract FusionStaking is FusionNFT {
         token = ERC20(_tokenAddress);
         maxTotalStake = _maxTotalStake;
         maxUserStake = _maxUserStake;
-        tokenIdCounter = 1;
         maxStakingDuration = _maxStakingDuration;
         rewardRateInPercentage = _rewardRateInPercentage;
     }
 
-    function stakeTokens(uint256 _amount) external {
-        require(!hasWithdrawn[msg.sender], "User has already withdrawn");
-        require(balanceOf(msg.sender) == 0, "User has a stake already");
-        require(_amount > 0, "Amount must be greater than 0");
-        require(_amount <= maxUserStake, "Amount exceeds user stake limit");
-        require(
-            totalStaked + _amount <= maxTotalStake,
-            "Amount exceeds total stake limit"
-        );
-        require(
-            token.transferFrom(msg.sender, address(this), _amount),
-            "Stake failed, check your allowance"
-        );
+    function stakeTokens(uint256 _amount) external isElegibleToStake() {
+        if (token.allowance(msg.sender, address(this)) < _amount) {
+            revert NoAllowance();
+        }
+        if (_amount == 0) {
+            revert AmountMustBeGreaterThanZero();
+        }
+        if (_amount > maxUserStake) {
+            revert AmountExceedsUserStakeLimit();
+        }
+        if (totalStaked + _amount > maxTotalStake) {
+            revert AmountExceedsTotalStakeLimit();
+        }
+        if (!token.transferFrom(msg.sender, address(this), _amount)) {
+            revert StakeFailed();
+        }
 
         totalStaked += _amount;
 
@@ -70,11 +105,18 @@ contract FusionStaking is FusionNFT {
     }
 
     function unstake(uint256 _tokenId) external {
-        require(_exists(_tokenId), "Token does not exist");
-        require(ownerOf(_tokenId) == msg.sender, "You do not own this token");
+        if (!_exists(_tokenId)) {
+            revert TokenDoesNotExist();
+        }
+
+        if (ownerOf(_tokenId) != msg.sender) {
+            revert NotTokenOwner();
+        }
 
         Stake storage stake = stakedBalances[_tokenId];
-        require(stake.exists, "Stake does not exist");
+        if (!stake.exists) {
+            revert StakeDoesNotExist();
+        }
         uint256 _amount = stake.amount;
 
         // Calculate and distribute rewards
@@ -82,16 +124,24 @@ contract FusionStaking is FusionNFT {
         uint256 withdrawAmount = 0;
 
         if (reward > 0) {
-            totalYield -= reward;
+            (bool success, uint256 newTotalYield) = trySub(totalYield, reward);
+
+            if (success) {
+                totalYield = newTotalYield;
+            } else {
+                // Handle the underflow case
+                revert NoYieldLeft();
+            }
+
             withdrawAmount += reward;
         }
 
-        // Burn the ERC-721 token
+        // Burn the NFT
         _burn(_tokenId);
 
         // Transfer the staked tokens back to the user
         stake.exists = false;
-        totalStaked -= _amount;
+        totalStaked = totalStaked.sub(_amount);
         require(token.transfer(msg.sender, withdrawAmount), "Unstake failed");
 
         emit Unstaked(msg.sender, _amount, _tokenId);
@@ -102,16 +152,17 @@ contract FusionStaking is FusionNFT {
     }
 
     function depositYield(uint256 _amount) external onlyOwner {
-        require(_amount > 0, "Amount must be greater than 0");
-        require(
-            token.transferFrom(owner(), address(this), _amount),
-            "Yield deposit failed, check your allowance"
-        );
+        if (_amount == 0) {
+            revert AmountMustBeGreaterThanZero();
+        }
+        if (!token.transferFrom(owner(), address(this), _amount)) {
+            revert NoAllowance();
+        }
         totalYield += _amount;
         emit YieldDeposited(_amount);
     }
 
-    function calculateReward(uint256 _tokenId) public view returns (uint256) {
+    function calculateReward(uint256 _tokenId) internal view returns (uint256) {
         Stake storage stake = stakedBalances[_tokenId];
         if (!stake.exists) {
             return 0;
@@ -122,9 +173,12 @@ contract FusionStaking is FusionNFT {
             stakingDuration = maxStakingDuration;
         }
 
-        uint256 stakingDurationInDays = stakingDuration / 1 days;
+        // Solidity uses floor division
+        // Yield should only be paid for full days
+        // Example: if a user has staked for 1.79 days he will get paid for 1 day only
+        uint256 stakingDurationInDays = stakingDuration.div(1 days);
 
-        uint256 reward = (stake.amount * stakingDurationInDays * rewardRateInPercentage) / (100 * maxStakingDuration);
+        uint256 reward = stake.amount.mul(stakingDurationInDays).mul(rewardRateInPercentage).div(100).div(maxStakingDuration);
 
         return reward;
     }

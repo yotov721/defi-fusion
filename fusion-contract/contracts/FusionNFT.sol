@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract FusionNFT is ERC721Enumerable, Ownable {
     uint256 public tokenIdCounter;
 
-    constructor() ERC721("Staking NFT", "SNFT") {}
+    constructor() ERC721("Staking NFT", "SNFT") {
+        tokenIdCounter = 1;
+    }
 
 }
