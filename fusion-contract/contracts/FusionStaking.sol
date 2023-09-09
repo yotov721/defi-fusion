@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./FusionNFT.sol";
 import "./FusionToken.sol";
+import "hardhat/console.sol";
 
 /**
  * @title FusionStaking
@@ -56,7 +57,6 @@ contract FusionStaking is FusionNFT {
     struct Stake {
         uint256 amount;
         uint256 startTimestamp;
-        bool exists;
     }
 
     event Staked(address indexed user, uint256 amount, uint256 tokenId);
@@ -110,7 +110,7 @@ contract FusionStaking is FusionNFT {
         totalStaked += _amount;
 
         _mint(msg.sender, tokenIdCounter);
-        stakedBalances[tokenIdCounter] = Stake(_amount, block.timestamp, true);
+        stakedBalances[tokenIdCounter] = Stake(_amount, block.timestamp);
 
         emit Staked(msg.sender, _amount, tokenIdCounter);
 
@@ -131,14 +131,11 @@ contract FusionStaking is FusionNFT {
         }
 
         Stake storage stake = stakedBalances[_tokenId];
-        if (!stake.exists) {
-            revert StakeDoesNotExist();
-        }
         uint256 _amount = stake.amount;
 
         // Calculate and distribute rewards
         uint256 reward = calculateReward(_tokenId);
-        uint256 withdrawAmount = 0;
+        uint256 withdrawAmount = _amount;
 
         if (reward > 0) {
             (bool success, uint256 newTotalYield) = totalYield.trySub(reward);
@@ -156,8 +153,6 @@ contract FusionStaking is FusionNFT {
         // Burn the NFT
         _burn(_tokenId);
 
-        // Transfer the staked tokens back to the user
-        stake.exists = false;
         totalStaked = totalStaked.sub(_amount);
         require(token.transfer(msg.sender, withdrawAmount), "Unstake failed");
 
@@ -190,9 +185,6 @@ contract FusionStaking is FusionNFT {
      */
     function calculateReward(uint256 _tokenId) internal view returns (uint256) {
         Stake storage stake = stakedBalances[_tokenId];
-        if (!stake.exists) {
-            return 0;
-        }
         uint256 stakingDuration = block.timestamp - stake.startTimestamp;
 
         if (stakingDuration > maxStakingDuration) {
@@ -201,10 +193,10 @@ contract FusionStaking is FusionNFT {
 
         // Solidity uses floor division
         // Yield should only be paid for full days
-        // Example: if a user has staked for 1.79 days he will get paid for 1 day only
-        uint256 stakingDurationInDays = stakingDuration.div(1 days);
+        // Example: If a user has staked for 1.79 days he will get paid for 1 day only
+        stakingDuration = stakingDuration.div(1 days).mul(1 days);
 
-        uint256 reward = stake.amount.mul(stakingDurationInDays).mul(rewardRateInPercentage).div(100).div(maxStakingDuration);
+        uint256 reward = stake.amount.mul(stakingDuration).mul(rewardRateInPercentage).div(100).div(maxStakingDuration);
 
         return reward;
     }
