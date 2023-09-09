@@ -8,12 +8,10 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./FusionNFT.sol";
 import "./FusionToken.sol";
 
-// TODO
-// NatSpec
-// README
-// require -> custom errors
-// Add SafeMath for operations
-//
+/**
+ * @title FusionStaking
+ * @dev This contract allows users to stake tokens and receive rewards.
+ */
 contract FusionStaking is FusionNFT {
     using SafeMath for uint256;
     using Math for uint256;
@@ -30,6 +28,9 @@ contract FusionStaking is FusionNFT {
     uint16 public rewardRateInPercentage;
     uint256 public maxStakingDuration;
 
+    /**
+     * @dev Modifier to check if a user is eligible to stake.
+     */
     modifier isElegibleToStake() {
         if (hasWithdrawn[msg.sender]) {
             revert UserAlreadyWithdrawn();
@@ -63,6 +64,14 @@ contract FusionStaking is FusionNFT {
     event YieldDeposited(uint256 amount);
     event RewardClaimed(address indexed user, uint256 tokenId, uint256 reward);
 
+    /**
+     * @dev Constructor to initialize the contract.
+     * @param _tokenAddress Address of the ERC20 token used for staking.
+     * @param _maxTotalStake Maximum total staking amount allowed.
+     * @param _maxUserStake Maximum staking amount per user.
+     * @param _maxStakingDuration Maximum staking duration in seconds.
+     * @param _rewardRateInPercentage Reward rate in percentage.
+     */
     constructor(
         address _tokenAddress,
         uint256 _maxTotalStake,
@@ -77,6 +86,10 @@ contract FusionStaking is FusionNFT {
         rewardRateInPercentage = _rewardRateInPercentage;
     }
 
+    /**
+     * @dev Stake tokens into the contract.
+     * @param _amount The amount of tokens to stake.
+     */
     function stakeTokens(uint256 _amount) external isElegibleToStake() {
         if (token.allowance(msg.sender, address(this)) < _amount) {
             revert NoAllowance();
@@ -104,6 +117,10 @@ contract FusionStaking is FusionNFT {
         tokenIdCounter++;
     }
 
+    /**
+     * @dev Unstake tokens from the contract and claim rewards
+     * @param _tokenId The Id of the staked NFT
+     */
     function unstake(uint256 _tokenId) external {
         if (!_exists(_tokenId)) {
             revert TokenDoesNotExist();
@@ -124,7 +141,7 @@ contract FusionStaking is FusionNFT {
         uint256 withdrawAmount = 0;
 
         if (reward > 0) {
-            (bool success, uint256 newTotalYield) = trySub(totalYield, reward);
+            (bool success, uint256 newTotalYield) = totalYield.trySub(reward);
 
             if (success) {
                 totalYield = newTotalYield;
@@ -151,6 +168,10 @@ contract FusionStaking is FusionNFT {
         hasWithdrawn[msg.sender] = true;
     }
 
+    /**
+     * @dev Deposit yield into the contract
+     * @param _amount The amount of yield tokens to deposit
+     */
     function depositYield(uint256 _amount) external onlyOwner {
         if (_amount == 0) {
             revert AmountMustBeGreaterThanZero();
@@ -162,6 +183,11 @@ contract FusionStaking is FusionNFT {
         emit YieldDeposited(_amount);
     }
 
+    /**
+     * @dev Calculate the reward for a stak
+     * @param _tokenId The ID of the staked NFT
+     * @return The calculated reward amount
+     */
     function calculateReward(uint256 _tokenId) internal view returns (uint256) {
         Stake storage stake = stakedBalances[_tokenId];
         if (!stake.exists) {
