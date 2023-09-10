@@ -4,10 +4,8 @@ pragma solidity 0.8.19;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./FusionNFT.sol";
 import "./FusionToken.sol";
-import "hardhat/console.sol";
 
 /**
  * @title FusionStaking
@@ -15,7 +13,6 @@ import "hardhat/console.sol";
  */
 contract FusionStaking is FusionNFT {
     using SafeMath for uint256;
-    using Math for uint256;
 
     IERC20 public token;
     uint256 public maxTotalStake;
