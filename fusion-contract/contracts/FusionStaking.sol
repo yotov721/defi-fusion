@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./FusionNFT.sol";
@@ -14,11 +13,12 @@ import "./FusionToken.sol";
 contract FusionStaking is FusionNFT {
     using SafeMath for uint256;
 
-    IERC20 public token;
+    address public token;
     uint256 public maxTotalStake;
     uint256 public maxUserStake;
     uint256 public totalYield;
     uint256 public totalStaked;
+    uint256 public totalStakers;
 
     mapping(uint256 => Stake) public stakedBalances;
     mapping(address => bool) public hasWithdrawn;
@@ -76,7 +76,7 @@ contract FusionStaking is FusionNFT {
         uint256 _maxStakingDuration,
         uint16 _rewardRateInPercentage
     ) {
-        token = ERC20(_tokenAddress);
+        token = _tokenAddress;
         maxTotalStake = _maxTotalStake;
         maxUserStake = _maxUserStake;
         maxStakingDuration = _maxStakingDuration;
@@ -84,13 +84,14 @@ contract FusionStaking is FusionNFT {
     }
 
     /**
-     * @dev Stake tokens into the contract.
-     * @param _amount The amount of tokens to stake.
+     * @dev Stake tokens with permit into the contract
+     * @param _amount The amount of tokens to stake
+     * @param _deadline The end timestamp of the permit
+     * @param _v The recovery id of the permit's signature.
+     * @param _r The first 32 bytes of the permit's signature.
+     * @param _s The second 32 bytes of the permit's signature.
      */
-    function stakeTokens(uint256 _amount) external isElegibleToStake() {
-        if (token.allowance(msg.sender, address(this)) < _amount) {
-            revert NoAllowance();
-        }
+    function stakeTokens(uint256 _amount, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external isElegibleToStake() {
         if (_amount == 0) {
             revert AmountMustBeGreaterThanZero();
         }
@@ -100,7 +101,9 @@ contract FusionStaking is FusionNFT {
         if (totalStaked + _amount > maxTotalStake) {
             revert AmountExceedsTotalStakeLimit();
         }
-        if (!token.transferFrom(msg.sender, address(this), _amount)) {
+
+        FusionToken(token).permit(msg.sender, address(this), _amount, _deadline, _v, _r, _s);
+        if (!FusionToken(token).transferFrom(msg.sender, address(this), _amount)) {
             revert StakeFailed();
         }
 
@@ -110,7 +113,7 @@ contract FusionStaking is FusionNFT {
         stakedBalances[tokenIdCounter] = Stake(_amount, block.timestamp);
 
         emit Staked(msg.sender, _amount, tokenIdCounter);
-
+        totalStakers++;
         tokenIdCounter++;
     }
 
@@ -151,7 +154,7 @@ contract FusionStaking is FusionNFT {
         _burn(_tokenId);
 
         totalStaked = totalStaked.sub(_amount);
-        require(token.transfer(msg.sender, withdrawAmount), "Unstake failed");
+        require(ERC20(token).transfer(msg.sender, withdrawAmount), "Unstake failed");
 
         emit Unstaked(msg.sender, _amount, _tokenId);
         emit RewardClaimed(msg.sender, _tokenId, reward);
@@ -164,13 +167,14 @@ contract FusionStaking is FusionNFT {
      * @dev Deposit yield into the contract
      * @param _amount The amount of yield tokens to deposit
      */
-    function depositYield(uint256 _amount) external onlyOwner {
+    function depositYield(uint256 _amount, uint256 _deadline, uint8 _v, bytes32 _r, bytes32 _s) external onlyOwner {
         if (_amount == 0) {
             revert AmountMustBeGreaterThanZero();
         }
-        if (!token.transferFrom(owner(), address(this), _amount)) {
-            revert NoAllowance();
-        }
+
+        FusionToken(token).permit(msg.sender, address(this), _amount, _deadline, _v, _r, _s);
+        FusionToken(token).transferFrom(owner(), address(this), _amount);
+
         totalYield += _amount;
         emit YieldDeposited(_amount);
     }
