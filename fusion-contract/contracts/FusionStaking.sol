@@ -181,15 +181,19 @@ contract FusionStaking is FusionNFT {
 
     /**
      * @dev Calculate the reward for a stak
+     * If user withdrawls before the staking duration his yield (which is proportional for the days staked) is slahed
      * @param _tokenId The ID of the staked NFT
      * @return The calculated reward amount
      */
     function calculateReward(uint256 _tokenId) internal view returns (uint256) {
         Stake storage stake = stakedBalances[_tokenId];
         uint256 stakingDuration = block.timestamp - stake.startTimestamp;
+        uint8 slash = 1;
 
         if (stakingDuration > maxStakingDuration) {
             stakingDuration = maxStakingDuration;
+        } else {
+            slash = 2;
         }
 
         // Solidity uses floor division
@@ -197,7 +201,7 @@ contract FusionStaking is FusionNFT {
         // Example: If a user has staked for 1.79 days he will get paid for 1 day only
         stakingDuration = stakingDuration.div(1 days).mul(1 days);
 
-        uint256 reward = stake.amount.mul(stakingDuration).mul(rewardRateInPercentage).div(100).div(maxStakingDuration);
+        uint256 reward = stake.amount.mul(stakingDuration).mul(rewardRateInPercentage).div(100).div(maxStakingDuration).div(slash);
 
         return reward;
     }

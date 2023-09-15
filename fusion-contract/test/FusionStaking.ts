@@ -272,7 +272,7 @@ describe("FusionStaking", function () {
             const userBalanceBefore = await fusionTokenContract.balanceOf(account1.address);
             await fusionStakingContract.connect(account1).stakeTokens(permitAmount, permitDeadline, account1Signature.v, account1Signature.r, account1Signature.s)
 
-            await time.increase(time.duration.days(30))
+            await time.increase(maxStakingDuration)
 
             await fusionStakingContract.connect(account1).unstake(nftId)
 
@@ -283,6 +283,28 @@ describe("FusionStaking", function () {
             expect(userBalanceAfter).to.be.gt(userBalanceBefore);
             expect(userBalanceAfter).to.be.equal(Number(userBalanceBefore) + yieldGenerated);
 
+            expect(fusionStakingContract.ownerOf(nftId)).to.be.reverted
+        })
+
+        it("Should return tokens and slashed yield when user stakes less than the full duration", async function () {
+            const { fusionStakingContract, account1, owner, fusionTokenContract, account1Signature, ownerSignature } = await loadFixture(deployFusionStaking)
+            const nftId = Number(await fusionStakingContract.tokenIdCounter());
+            await fusionStakingContract.connect(owner).depositYield(permitAmount, permitDeadline, ownerSignature.v, ownerSignature.r, ownerSignature.s)
+
+            const userBalanceBefore = await fusionTokenContract.balanceOf(account1.address);
+            await fusionStakingContract.connect(account1).stakeTokens(permitAmount, permitDeadline, account1Signature.v, account1Signature.r, account1Signature.s)
+
+            const stakingDuration = maxStakingDuration/2
+            await time.increase(stakingDuration)
+
+            await fusionStakingContract.connect(account1).unstake(nftId)
+
+            const userBalanceAfter = await fusionTokenContract.balanceOf(account1.address);
+
+            let yieldGenerated = Math.floor(((permitAmount * stakingDuration * rewardRateInPercentage / 100) / maxStakingDuration) / 2)
+
+            expect(userBalanceAfter).to.be.gt(userBalanceBefore);
+            expect(userBalanceAfter).to.be.equal(Number(userBalanceBefore) + yieldGenerated);
             expect(fusionStakingContract.ownerOf(nftId)).to.be.reverted
         })
 
