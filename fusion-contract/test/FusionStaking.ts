@@ -337,21 +337,21 @@ describe("FusionStaking", function () {
             await expect(stakeTx).to.be.revertedWithCustomError(fusionStakingContract, "NoYieldLeft")
         })
 
-        it("Should return tokens to user when staking duration is less than a day", async function () {
+        it("Should return tokens and NO yield when staking duration is less than a day", async function () {
             const { fusionStakingContract, account1, owner, fusionTokenContract, account1Signature, ownerSignature } = await loadFixture(deployFusionStaking)
             const nftId = Number(await fusionStakingContract.tokenIdCounter());
             await fusionStakingContract.connect(owner).depositYield(permitAmount, permitDeadline, ownerSignature.v, ownerSignature.r, ownerSignature.s)
 
+            const userBalanceBefore = await fusionTokenContract.balanceOf(account1.address);
+
             await fusionStakingContract.connect(account1).stakeTokens(permitAmount, permitDeadline, account1Signature.v, account1Signature.r, account1Signature.s)
             await time.increase(time.duration.days(0.5))
-
-            const userBalanceBefore = await fusionTokenContract.balanceOf(account1.address);
 
             await fusionStakingContract.connect(account1).unstake(nftId)
 
             const userBalanceAfter = await fusionTokenContract.balanceOf(account1.address);
 
-            expect(userBalanceAfter).to.be.gt(userBalanceBefore);
+            expect(userBalanceAfter).to.be.eq(userBalanceBefore);
             expect(fusionStakingContract.ownerOf(nftId)).to.be.reverted
         })
     })
