@@ -1,4 +1,4 @@
-const ethereumService = require('../services/etheremService');
+const tokenService = require('../services/tokenService');
 const ethers = require('ethers');
 
 exports.getTokenInfo = async (req, res) => {
@@ -9,7 +9,7 @@ exports.getTokenInfo = async (req, res) => {
         return res.status(400).json({ error: 'Invalid token address' });
     }
 
-    const tokenInfo = await ethereumService.getTokenInfo(tokenAddress);
+    const tokenInfo = await tokenService.getTokenInfo(tokenAddress);
 
     res.json(tokenInfo);
   } catch (error) {
