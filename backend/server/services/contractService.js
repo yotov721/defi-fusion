@@ -15,11 +15,10 @@ async function getContractData(contractAddress, userAddress, property) {
     let contractData = {};
 
     try {
-        if(fusionStakingContract === null) {
+        if (fusionStakingContract === null) {
             createContract(contractAddress)
         }
 
-        // http://localhost:3000/contract/0x848186D33fEF848f0e965300dD8E1B58D60E96dB?userAddress=0xDfEDD116e09aB9a877b08e0E348B6299289643cd&property=userData
         if (userAddress && property === 'userData') {
             contractData['userData'] = await getUserDataFromContract(userAddress);
         } else if (userAddress && typeof property === 'undefined') {
@@ -60,10 +59,14 @@ async function getUserDataFromContract(userAddress) {
         for (const nftId of nftIds) {
             const stakedBalanceData = await fusionStakingContract.stakedBalances(nftId);
 
+            const startTimestampInSeconds = Number(stakedBalanceData.startTimestamp);
+            const startDatetime = new Date(startTimestampInSeconds * 1000).toLocaleString();
+
             userData[nftId] = {
-                amountInWei: stakedBalanceData.amount.toNumber(),
-                amountInEth: ethers.formatEther(stakedBalanceData.amount.toNumber()),
-                startTimestamp: stakedBalanceData.startTimestamp.toNumber(),
+                stakedAmountInWei: Number(stakedBalanceData.amount),
+                stakedAmountInEth: ethers.formatEther(stakedBalanceData.amount),
+                startTimestamp: startTimestampInSeconds,
+                startDatetime: startDatetime,
             };
         }
     } catch (error) {

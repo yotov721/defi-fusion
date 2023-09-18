@@ -2,11 +2,11 @@ const tokenService = require('../services/tokenService');
 const ethers = require('ethers');
 
 exports.getTokenInfo = async (req, res) => {
-  try {
-    const tokenAddress = req.params.address;
+  const tokenAddress = req.params.address;
 
+  try {
     if (!ethers.isAddress(tokenAddress)) {
-        return res.status(400).json({ error: 'Invalid token address' });
+      return res.status(400).json({ error: 'Invalid token address' });
     }
 
     const tokenInfo = await tokenService.getTokenInfo(tokenAddress);
@@ -14,6 +14,6 @@ exports.getTokenInfo = async (req, res) => {
     res.json(tokenInfo);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message });
   }
 };
