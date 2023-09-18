@@ -1,4 +1,5 @@
 import { ethers, network, run } from "hardhat";
+import { time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 async function main() {
     const fusionToken = await ethers.deployContract("FusionToken");
@@ -9,10 +10,10 @@ async function main() {
 
     const constructorArgs = [
         fusionToken.target,
-        1000000, // maxTotalStake
-        1000,    // maxUserStake
-        30,      // maxStakingDuration (in seconds)
-        5       // rewardRateInPercentage
+        1_000_000,                   // maxTotalStake
+        500_000,                     // maxUserStake
+        time.duration.days(30),      // maxStakingDuration (in seconds)
+        10                           // rewardRateInPercentage
     ];
 
     const fusionStaking = await ethers.deployContract("FusionStaking", constructorArgs)
