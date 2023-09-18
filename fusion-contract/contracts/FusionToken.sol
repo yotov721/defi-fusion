@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: MIT
+// WARNING: This contract is for testing and educational purposes only.
+// Do not use in production environments.
+// In a production ready state the token would have an ICO
+// With the current token implementation anyone can mint themselves tokens
 pragma solidity 0.8.19;
 pragma abicoder v2;
 
