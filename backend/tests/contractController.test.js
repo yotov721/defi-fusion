@@ -9,10 +9,29 @@ chai.use(chaiHttp);
 const contractAddress = "0x848186D33fEF848f0e965300dD8E1B58D60E96dB"
 const stakerAddress = "0xDfEDD116e09aB9a877b08e0E348B6299289643cd"
 
+const expectedContractInfo = {
+    maxTotalStake: 1_000_000,
+    maxUserStake: 500_000,
+    rewardRateInPercentage: 10,
+    maxStakingDuration: 2592000,
+    maxStakingDurationInDays: 30,
+    maxTotalStakeInEth: 0.000000000001,
+    maxUserStakeInEth: 0.0000000000005
+};
+
+const expectedStakerInfo = {
+    stakedAmountInWei: 500_000,
+    stakedAmountInEth: 0.0000000000005,
+    startTimestamp: 1695044532,
+    startDatetime: "9/18/2023, 4:42:12 PM"
+}
+
 describe('Contract Controller', () => {
     describe('GET /contract/:address', () => {
 
       it('should return contract information for a valid address', (done) => {
+        // Only thefields that are not expected to change are verified
+
         chai.request(app)
           .get(`/contract/${contractAddress}`)
           .end((err, res) => {
@@ -22,16 +41,16 @@ describe('Contract Controller', () => {
 
             const properties = res.body.properties
 
-            expect(properties).to.have.property('maxTotalStake');
-            expect(properties).to.have.property('maxUserStake');
             expect(properties).to.have.property('totalYield');
             expect(properties).to.have.property('totalStaked');
             expect(properties).to.have.property('totalStakers');
-            expect(properties).to.have.property('rewardRateInPercentage');
-            expect(properties).to.have.property('maxStakingDuration');
-            expect(properties).to.have.property('maxStakingDurationInDays');
-            expect(properties).to.have.property('maxTotalStakeInEth');
-            expect(properties).to.have.property('maxUserStakeInEth');
+            expect(Number(properties.maxTotalStake)).to.equal(expectedContractInfo.maxTotalStake);
+            expect(Number(properties.maxUserStake)).to.equal(expectedContractInfo.maxUserStake);
+            expect(Number(properties.rewardRateInPercentage)).to.equal(expectedContractInfo.rewardRateInPercentage);
+            expect(Number(properties.maxStakingDuration)).to.equal(expectedContractInfo.maxStakingDuration);
+            expect(Number(properties.maxStakingDurationInDays)).to.equal(expectedContractInfo.maxStakingDurationInDays);
+            expect(Number(properties.maxTotalStakeInEth)).to.equal(expectedContractInfo.maxTotalStakeInEth);
+            expect(Number(properties.maxUserStakeInEth)).to.equal(expectedContractInfo.maxUserStakeInEth);
 
             done();
           });
@@ -60,7 +79,8 @@ describe('Contract Controller', () => {
 
             const properties = res.body.properties
 
-            expect(properties).to.have.property(`${contractProperty}`);
+            expect(properties).to.have.property(`${contractProperty}`)
+            expect(Number(properties[contractProperty])).equal(expectedContractInfo.maxUserStake);
 
             done();
           });
@@ -75,7 +95,7 @@ describe('Contract Controller', () => {
           .end((err, res) => {
             res.should.have.status(500);
             res.body.should.be.an('object');
-            res.body.should.have.property('error');
+            res.body.should.have.property('error').equal(`Property ${contractProperty} not found in contract`);
             done();
           });
 
@@ -105,9 +125,9 @@ describe('Contract Controller', () => {
         chai.request(app)
           .get(`/contract/${contractAddress}?userAddress=0xInvalid_user_address`)
           .end((err, res) => {
-            res.should.have.status(500);
+            res.should.have.status(400);
             res.body.should.be.an('object');
-            res.body.should.have.property('error');
+            res.body.should.have.property('error').equal('Invalid user address');
 
             done();
           });
@@ -123,10 +143,15 @@ describe('Contract Controller', () => {
             const userData = res.body.userData
 
             expect(userData).to.have.property('1');
-            expect(userData[1]).to.have.property('stakedAmountInWei');
-            expect(userData[1]).to.have.property('stakedAmountInEth');
-            expect(userData[1]).to.have.property('startTimestamp');
-            expect(userData[1]).to.have.property('startDatetime');
+
+            const stakedAmountInWei = Number(userData[1].stakedAmountInWei);
+            const stakedAmountInEth = Number(userData[1].stakedAmountInEth);
+            const startTimestamp = Number(userData[1].startTimestamp);
+
+            expect(stakedAmountInWei).to.equal(expectedStakerInfo.stakedAmountInWei);
+            expect(stakedAmountInEth).to.equal(expectedStakerInfo.stakedAmountInEth);
+            expect(startTimestamp).to.equal(expectedStakerInfo.startTimestamp);
+            expect(userData[1]).to.have.property('startDatetime').equal(expectedStakerInfo.startDatetime);
             done();
           });
       });
@@ -141,7 +166,7 @@ describe('Contract Controller', () => {
             res.body.should.have.property('properties');
             const properties = res.body.properties
 
-            expect(properties).to.have.property(contractProperty);
+            expect(properties).to.have.property(contractProperty).equal(expectedContractInfo.maxUserStake);
 
             done();
           });
@@ -150,6 +175,3 @@ describe('Contract Controller', () => {
     });
 
   });
-
-// http://localhost:3000/contract/0x848186D33fEF848f0e965300dD8E1B58D60E96dB?userAddress=0xDfEDD116e09aB9a877b08e0E348B6299289643cd&property=userData
-

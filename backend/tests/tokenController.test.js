@@ -8,14 +8,20 @@ chai.use(chaiHttp);
 describe('Token Controller', () => {
   describe('GET /token/:address', () => {
     it('should return token information for a valid address', (done) => {
+      const expectedTokenInfo = {
+        name: 'Fusion Token',
+        symbol: 'FSN',
+        decimals: 18,
+      };
+
       chai.request(app)
         .get('/token/0xfC089A418902af9C3553E024f013609Bb3C3EAdB')
         .end((err, res) => {
           res.should.have.status(200);
           res.body.should.be.an('object');
-          res.body.should.have.property('name');
-          res.body.should.have.property('symbol');
-          res.body.should.have.property('decimals');
+          res.body.should.have.property('name').equal(expectedTokenInfo.name);
+          res.body.should.have.property('symbol').equal(expectedTokenInfo.symbol);
+          res.body.should.have.property('decimals').equal(expectedTokenInfo.decimals);
           done();
         });
     });
