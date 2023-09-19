@@ -1,6 +1,6 @@
 # Fusion-contract
 
-Welcome to the Fusin contract Project! This repository contains a basic setup for an Ethereum smart contract development project using [Hardhat](https://hardhat.org/).
+Welcome to the Fusion contract project! This repository contains setup for the Fusion DeFi smart contract development project using [Hardhat](https://hardhat.org/).
 
 ## Project Structure
 
@@ -46,7 +46,7 @@ Welcome to the Fusin contract Project! This repository contains a basic setup fo
 ## Deployment
 1. **Deploy:**
     ```bash
-    npx hardhat deploy --netowrk <network> .\scripts\deploy-fusion.ts
+    npx hardhat deploy --netowrk <network> .\scripts\deploy-fusion.ts > deploy-verify-sepolia.md
     ```
 
     If network specified is `sepolia` the contracts are also verified<br>
