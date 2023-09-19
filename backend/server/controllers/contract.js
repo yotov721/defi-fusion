@@ -13,7 +13,9 @@ exports.getContractInfo = async (req, res) => {
 
         res.json(result)
     } catch (error) {
-        console.error(error);
+        if (process.env.DEBUG_MODE === 'true') {
+            console.error(error);
+        }
         res.status(500).json({ error: error.message });
     }
 };
