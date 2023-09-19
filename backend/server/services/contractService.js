@@ -8,7 +8,6 @@ let fusionStakingContract = null;
 
 function createContract(contractAddress) {
     fusionStakingContract = new ethers.Contract(contractAddress, fusionStaking.abi, wallet);
-    console.log("Contract created")
 }
 
 async function getContractData(contractAddress, userAddress, property) {
