@@ -1,12 +1,12 @@
-const ethers = require('ethers');
-const erc20Abi = require('../../abi/ERC20abi.json');
+import { Contract, ethers, Wallet } from 'ethers';
+import erc20Abi from '../../abi/ERC20abi.json';
 
 const provider = new ethers.InfuraProvider('sepolia', process.env.INFURA_KEY);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const wallet = new Wallet(process.env.PRIVATE_KEY, provider);
 
-async function getTokenInfo(tokenAddress) {
+async function getTokenInfo(tokenAddress: string) {
   try {
-    const tokenContract = new ethers.Contract(tokenAddress, erc20Abi, wallet);
+    const tokenContract = new Contract(tokenAddress, erc20Abi, wallet);
 
     const [name, symbol, decimalsBig] = await Promise.all([
       tokenContract.name(),
@@ -22,6 +22,6 @@ async function getTokenInfo(tokenAddress) {
   }
 }
 
-module.exports = {
+export default {
   getTokenInfo,
 };

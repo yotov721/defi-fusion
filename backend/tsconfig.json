@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "types": [
+            "node",
+            "mocha"
+        ],
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "module": "ES6",
+
+    }
+}

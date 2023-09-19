@@ -1,21 +1,21 @@
-const ethers = require('ethers');
-const fusionStaking = require('../../abi/FusionStaking.json');
+import { Contract, ethers, Wallet } from 'ethers';
+import fusionStaking from '../../abi/FusionStaking.json';
 
 const provider = new ethers.InfuraProvider('sepolia', process.env.INFURA_KEY);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+const wallet = new Wallet(process.env.PRIVATE_KEY, provider);
 
-let fusionStakingContract = null;
+let fusionStakingContract: Contract | null = null;
 
-function createContract(contractAddress) {
+function createContract(contractAddress: string): void {
     fusionStakingContract = new ethers.Contract(contractAddress, fusionStaking.abi, wallet);
 }
 
-async function getContractData(contractAddress, userAddress, property) {
-    let contractData = {};
+async function getContractData(contractAddress: string, userAddress: string | undefined, property: string | undefined): Promise<any> {
+    let contractData: any = {};
 
     try {
         if (fusionStakingContract === null) {
-            createContract(contractAddress)
+            createContract(contractAddress);
         }
 
         if (userAddress && property === 'userData') {
@@ -26,7 +26,7 @@ async function getContractData(contractAddress, userAddress, property) {
         } else if (property) {
             contractData['properties'] = await getPropertyFromContract(property);
         } else {
-            contractData['properties'] = await getAllProperties()
+            contractData['properties'] = await getAllProperties();
         }
     } catch (error) {
         throw error;
@@ -35,31 +35,30 @@ async function getContractData(contractAddress, userAddress, property) {
     return contractData;
 }
 
-async function getUserDataFromContract(userAddress) {
-    // Get NFTs owned by the address. An address can stake only once, but can buy other stakers's NFTs
-    const nftOwnedCount = await fusionStakingContract.balanceOf(userAddress)
-    if (nftOwnedCount == 0) {
+async function getUserDataFromContract(userAddress: string): Promise<any> {
+    const nftOwnedCount: number = await fusionStakingContract.balanceOf(userAddress);
+
+    if (nftOwnedCount === 0) {
         throw new Error(`Address: ${userAddress} does not own any stakes in the contract`);
     }
 
-    const nftIds = [];
-    const userData = {};
+    const nftIds: number[] = [];
+    const userData: any = {};
 
     try {
-        const promises = [];
+        const promises: Promise<number>[] = [];
         for (let i = 0; i < nftOwnedCount; i++) {
             promises.push(fusionStakingContract.tokenOfOwnerByIndex(userAddress, i));
         }
 
-        const results = await Promise.all(promises);
+        const results: number[] = await Promise.all(promises);
         nftIds.push(...results);
 
-        // Fetch stakedBalances for each nftId and populate userData
         for (const nftId of nftIds) {
-            const stakedBalanceData = await fusionStakingContract.stakedBalances(nftId);
+            const stakedBalanceData: any = await fusionStakingContract.stakedBalances(nftId);
 
-            const startTimestampInSeconds = Number(stakedBalanceData.startTimestamp);
-            const startDatetime = new Date(startTimestampInSeconds * 1000).toLocaleString();
+            const startTimestampInSeconds: number = Number(stakedBalanceData.startTimestamp);
+            const startDatetime: string = new Date(startTimestampInSeconds * 1000).toLocaleString();
 
             userData[nftId] = {
                 stakedAmountInWei: Number(stakedBalanceData.amount),
@@ -75,19 +74,20 @@ async function getUserDataFromContract(userAddress) {
     return userData;
 }
 
-async function getPropertyFromContract(property) {
-    let result
+async function getPropertyFromContract(property: string): Promise<any> {
+    let result: any;
+
     try {
-        result = await fusionStakingContract[property]()
+        result = await fusionStakingContract[property]();
     } catch (error) {
-        throw new Error(`Property ${property} not found in contract`)
+        throw new Error(`Property ${property} not found in contract`);
     }
 
     return { [property]: Number(result) };
 }
 
-async function getAllProperties() {
-    const propertyNames = [
+async function getAllProperties(): Promise<any> {
+    const propertyNames: string[] = [
         'maxTotalStake',
         'maxUserStake',
         'totalYield',
@@ -97,24 +97,24 @@ async function getAllProperties() {
         'maxStakingDuration',
     ];
 
-    const values = await Promise.all(
-        propertyNames.map(async (propertyName) => {
+    const values: number[] = await Promise.all(
+        propertyNames.map(async (propertyName: string) => {
             const value = await fusionStakingContract[propertyName]();
             return Number(value);
         })
     );
 
-    const properties = Object.fromEntries(
-        propertyNames.map((propertyName, index) => [propertyName, values[index]])
+    const properties: any = Object.fromEntries(
+        propertyNames.map((propertyName: string, index: number) => [propertyName, values[index]])
     );
 
     properties.maxStakingDurationInDays = properties.maxStakingDuration / 86400;
-    properties.maxTotalStakeInEth = ethers.formatEther(properties.maxTotalStake)
-    properties.maxUserStakeInEth = ethers.formatEther(properties.maxUserStake)
+    properties.maxTotalStakeInEth = ethers.formatEther(properties.maxTotalStake);
+    properties.maxUserStakeInEth = ethers.formatEther(properties.maxUserStake);
 
     return properties;
 }
 
-module.exports = {
+export default {
     getContractData,
 };
