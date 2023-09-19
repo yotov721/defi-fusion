@@ -9,6 +9,11 @@ exports.getContractInfo = async (req, res) => {
         if (!ethers.isAddress(contractAddress)) {
             return res.status(400).json({ error: 'Invalid contract address' });
         }
+
+        if(typeof userAddress != 'undefined' && !ethers.isAddress(userAddress)) {
+            return res.status(400).json({ error: 'Invalid user address' });
+        }
+
         const result = await contractService.getContractData(contractAddress, userAddress, property);
 
         res.json(result)
