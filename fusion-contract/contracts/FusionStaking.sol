@@ -108,7 +108,7 @@ contract FusionStaking is FusionNFT {
 
         totalStaked += _amount;
 
-        _mint(msg.sender, tokenIdCounter);
+        _safeMint(msg.sender, tokenIdCounter);
         stakedBalances[tokenIdCounter] = Stake(_amount, block.timestamp);
 
         emit Staked(msg.sender, _amount, tokenIdCounter);
