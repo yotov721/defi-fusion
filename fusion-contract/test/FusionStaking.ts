@@ -246,7 +246,7 @@ describe("FusionStaking", function () {
         it("Should revert when token transfer fails", async function () {
             const { fusionStakingContract, owner, ownerSignature } = await loadFixture(deployWithTransferFromMock)
             const stakeTx = fusionStakingContract.connect(owner).stakeTokens(permitAmount, permitDeadline, ownerSignature.v, ownerSignature.r, ownerSignature.s)
-            await expect(stakeTx).to.be.revertedWithCustomError(fusionStakingContract, "StakeFailed")
+            await expect(stakeTx).to.be.revertedWith("SafeERC20: ERC20 operation did not succeed")
 
         })
     })

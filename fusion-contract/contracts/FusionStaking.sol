@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./FusionNFT.sol";
 import "./FusionToken.sol";
 
@@ -103,9 +104,7 @@ contract FusionStaking is FusionNFT {
         }
 
         FusionToken(token).permit(msg.sender, address(this), _amount, _deadline, _v, _r, _s);
-        if (!FusionToken(token).transferFrom(msg.sender, address(this), _amount)) {
-            revert StakeFailed();
-        }
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), _amount);
 
         totalStaked += _amount;
 
@@ -173,7 +172,7 @@ contract FusionStaking is FusionNFT {
         }
 
         FusionToken(token).permit(msg.sender, address(this), _amount, _deadline, _v, _r, _s);
-        FusionToken(token).transferFrom(owner(), address(this), _amount);
+        SafeERC20.safeTransferFrom(IERC20(token), owner(), address(this), _amount);
 
         totalYield += _amount;
         emit YieldDeposited(_amount);
