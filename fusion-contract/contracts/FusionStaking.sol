@@ -189,7 +189,7 @@ contract FusionStaking is FusionNFT {
         uint256 stakingDuration = block.timestamp - stake.startTimestamp;
         uint8 slash = 1;
 
-        if (stakingDuration > maxStakingDuration) {
+        if (stakingDuration >= maxStakingDuration) {
             stakingDuration = maxStakingDuration;
         } else {
             slash = 2;
